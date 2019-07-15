@@ -1,0 +1,22 @@
+{
+  "name": "cards-against-humanity",
+  "version": "1.0.0",
+  "description": "A web app that allows for playing cards against humanity online as well as the addition of custom card packs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abir-taheer/cuddly-memory.git"
+  },
+  "author": "Abir Taheer",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/abir-taheer/cuddly-memory/issues"
+  },
+  "homepage": "https://github.com/abir-taheer/cuddly-memory#readme",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
+}
