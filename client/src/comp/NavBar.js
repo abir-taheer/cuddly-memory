@@ -15,6 +15,9 @@ import '@material/list/dist/mdc.list.css';
 // React Router Links for Navigation
 import {Link} from "react-router-dom";
 
+// State from Provider
+import {AppContext} from "./AppProvider";
+
 export class NavBar extends React.Component {
     constructor(props) {
         super(props);
@@ -38,6 +41,17 @@ export class NavBar extends React.Component {
                     </DrawerHeader>
                     <DrawerContent>
                         <List>
+                            <AppContext.Consumer>
+                                {(context) => {
+                                    return (context.state.signed_in) ?
+                                        (<Link to="/login">
+                                            <ListItem>Log Out</ListItem>
+                                        </Link>) :
+                                        (<Link to="/login">
+                                            <ListItem>Log In</ListItem>
+                                        </Link>)
+                                }}
+                            </AppContext.Consumer>
                             <Link to="/">
                                 <ListItem>Home</ListItem>
                             </Link>
