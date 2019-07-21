@@ -18,6 +18,7 @@ import {Link} from "react-router-dom";
 // State from Provider
 import {AppContext} from "./AppProvider";
 
+
 export class NavBar extends React.Component {
     constructor(props) {
         super(props);
@@ -41,28 +42,48 @@ export class NavBar extends React.Component {
                     </DrawerHeader>
                     <DrawerContent>
                         <List>
+                            {/*LogIn Button*/}
+                            <AppContext.Consumer>
+                                {(context) => {
+                                    return ( ! context.state.signed_in) ?
+                                        (<Link to="/login">
+                                            <ListItem>Log In</ListItem>
+                                        </Link>) :
+                                        null;
+                                }}
+                            </AppContext.Consumer>
+                            <Link to="/">
+                                <ListItem>
+                                    Home
+                                </ListItem>
+                            </Link>
+
+                            {/*LogOut Button*/}
                             <AppContext.Consumer>
                                 {(context) => {
                                     return (context.state.signed_in) ?
                                         (<Link to="/login">
                                             <ListItem>Log Out</ListItem>
                                         </Link>) :
-                                        (<Link to="/login">
-                                            <ListItem>Log In</ListItem>
-                                        </Link>)
+                                        null;
                                 }}
                             </AppContext.Consumer>
-                            <Link to="/">
-                                <ListItem>Home</ListItem>
-                            </Link>
                         </List>
                     </DrawerContent>
                 </Drawer>
 
-                <SimpleTopAppBar
-                    title="cuddly-memory"
-                    navigationIcon={{ onClick: () => this.toggleDrawer() }}
-                />
+                <AppContext.Consumer>
+                    {
+                        (context) => {
+                            return (
+                                <SimpleTopAppBar
+                                    title={context.app_title}
+                                        navigationIcon={{ onClick: () => this.toggleDrawer() }}
+                                />
+                            )
+                        }
+                    }
+                </AppContext.Consumer>
                 <TopAppBarFixedAdjust />
             </div>
         );
