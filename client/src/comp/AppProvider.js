@@ -45,8 +45,8 @@ export class AppProvider extends React.Component {
     return (
         <AppContext.Provider value={this.state}>
           <ThemeProvider options={{
-            primary: '#303030',
-            secondary: '#661fff',
+            primary: '#5d1049',
+            secondary: '#fa3336',
             error: '#b00020',
             background: '#fff',
             surface: '#fff',

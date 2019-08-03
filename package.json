@@ -1,5 +1,5 @@
 {
-  "name": "cards-against-humanity",
+  "name": "cuddly-memory",
   "version": "1.0.0",
   "description": "A web app that allows for playing cards against humanity online as well as the addition of custom card packs",
   "main": "index.js",
