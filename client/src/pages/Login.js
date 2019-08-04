@@ -2,6 +2,8 @@ import React from 'react';
 import {NavBar} from "../comp/NavBar";
 import {AppContext} from "../comp/AppProvider";
 
+import {Link, withRouter} from 'react-router-dom';
+
 import {Card, CardActions} from '@rmwc/card';
 import {Button} from "@rmwc/button";
 import '@material/card/dist/mdc.card.css';
@@ -15,6 +17,7 @@ import '@material/floating-label/dist/mdc.floating-label.css';
 import '@material/notched-outline/dist/mdc.notched-outline.css';
 import '@material/line-ripple/dist/mdc.line-ripple.css';
 
+import {Queue} from "../comp/Queue";
 
 export class Login extends React.Component {
   render () {
@@ -89,8 +92,33 @@ class LoginForm extends React.Component {
     };
 
     props.setSubmit(() => {
-      // TODO: MAKE PROCEDURE FOR SIGNING IN
-      alert(this.state.password);
+      // Perform a post request to the login api
+      fetch("/api/auth/login", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(this.state),
+      })
+          .then(response => response.json())
+          .then( data => {
+            if( ! data.success ){
+              Queue.notify({
+                body: data.error,
+                actions: [
+                  {
+                    "icon": "close"
+                  }
+                ]
+              });
+            } else {
+              const Users = () => {
+                const contextValue = React.useContext(AppContext);
+                console.log(contextValue);
+              };
+              Users();
+            }
+          });
     });
 
     this.updateField = ev => {

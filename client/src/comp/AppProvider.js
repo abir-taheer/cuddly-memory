@@ -15,21 +15,26 @@ export class AppProvider extends React.Component {
 
     super(props);
 
+    this.updateState = () => {
+      fetch('/api/state')
+          .then(response => response.json())
+          .then(data => {
+            this.setState({ state: data });
+            this.setState({initialized: true})
+          });
+    };
+
     this.state = {
       initialized:  false,
       app_title: "cuddly-memory",
-      state: {}
+      state: {},
+      updateState: this.updateState
     };
 
   }
 
   componentDidMount() {
-    fetch('/api/state')
-        .then(response => response.json())
-        .then(data => {
-          this.setState({ state: data });
-          this.setState({initialized: true})
-        });
+    this.updateState();
   }
 
   render() {

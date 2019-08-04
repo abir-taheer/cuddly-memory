@@ -4,6 +4,12 @@ import './App.css';
 import {Landing} from './pages/Landing';
 import {Login} from './pages/Login';
 
+import { SnackbarQueue } from "@rmwc/snackbar";
+import '@material/snackbar/dist/mdc.snackbar.css';
+import '@material/button/dist/mdc.button.css';
+
+import { Queue } from "./comp/Queue";
+
 
 function App() {
   return (
@@ -14,6 +20,7 @@ function App() {
             <Route exact path="/login" component={Login}/>
           </div>
         </Router>
+        <SnackbarQueue messages={Queue.messages} />
       </div>
   );
 }
