@@ -4,7 +4,8 @@
   "description": "A web app that allows for playing cards against humanity online as well as the addition of custom card packs",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "node devHotReload.js"
   },
   "repository": {
     "type": "git",

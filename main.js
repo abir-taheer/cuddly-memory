@@ -13,9 +13,8 @@ const session = require('express-session')({
     maxAge: (30 * 86400 * 1000)
   }
 });
+
 const app_port = 3001;
-
-
 
 app.use(session);
 
