@@ -16,12 +16,6 @@ const session = require('express-session')({
   }
 });
 
-db.connect(function(err) {
-  if (err) throw err;
-  console.log("Connected!");
-  // TODO: Add more procedures
-});
-
 const app_port = 3001;
 
 app.use(session);
@@ -33,6 +27,7 @@ io.set('transports', ['websocket']);
 io.use(shared_session(session, {
   autoSave: true
 }));
+
 
 
 io.on('connection', socket => {
@@ -47,7 +42,7 @@ io.on('connection', socket => {
 });
 
 // Called when the user first opens the app
-app.get("/api/state", (req, res) => {
+app.route("/api/state").get((req, res) => {
   res.send(JSON.stringify({
     "signed_in": (req.session.signed_in || false),
     "name": (req.session.name || "Guest")
@@ -55,8 +50,9 @@ app.get("/api/state", (req, res) => {
 });
 
 
-app.post("/api/auth/login", (req, res) => {
-  req.session.signed_in = true;
+app.route("/api/auth/login").post("/api/auth/login", (req, res) => {
+
+
   res.send(JSON.stringify({
     "success": false,
     "error": "Those credentials are not valid"

@@ -1,5 +1,5 @@
 # cuddly-memory
-[The title of your sex tape ;)](https://www.youtube.com/watch?v=MeIc6dh_YL4)
+[Title of your sex tape ;)](https://www.youtube.com/watch?v=MeIc6dh_YL4)
 
 ### First Time Setup
 1. Clone the repository 
@@ -29,4 +29,4 @@
     npm start
     ```
 
-This should open a browser window that leads to your react application. The react application will automatically hot reload 
+This should open a browser window that leads to your react application. The react application will automatically hot reload.

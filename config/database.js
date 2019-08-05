@@ -1,13 +1,12 @@
 const mysql = require("mysql");
 
-const credentials = {
+const con = mysql.createPool({
+  connectionLimit: 15,
   host: "localhost",
   user: "myuser",
   password: "!Mypassword1",
   database: "cuddly_memory"
-};
-
-const con = mysql.createConnection(credentials);
+});
 
 con.connect(function(err) {
   if (err) throw err;
