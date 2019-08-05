@@ -60,7 +60,6 @@ export class LoginBox extends React.Component {
           <AppContext.Consumer>
             { (context) => {
                 if( this.state.success ){
-                  this.setSuccess(false);
                   context.updateState();
                 }
                 if( context.state.signed_in ){

@@ -61,10 +61,17 @@ export class NavBar extends React.Component {
                             {/*LogOut Button*/}
                             <AppContext.Consumer>
                                 {(context) => {
+                                    function logOut() {
+                                        fetch("/api/auth/logout")
+                                            .then(response => response.json())
+                                            .then(() => {
+                                                context.updateState();
+                                            });
+                                    }
                                     return (context.state.signed_in) ?
-                                        (<Link to="/login">
-                                            <ListItem>Log Out</ListItem>
-                                        </Link>) :
+                                        (<div>
+                                            <ListItem onClick={logOut}>Log Out</ListItem>
+                                        </div>) :
                                         null;
                                 }}
                             </AppContext.Consumer>
