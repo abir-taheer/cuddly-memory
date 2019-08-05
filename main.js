@@ -1,3 +1,5 @@
+const db = require("./config/database.js");
+
 const app = require('express')();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
@@ -12,6 +14,12 @@ const session = require('express-session')({
     secure: false,
     maxAge: (30 * 86400 * 1000)
   }
+});
+
+db.connect(function(err) {
+  if (err) throw err;
+  console.log("Connected!");
+  // TODO: Add more procedures
 });
 
 const app_port = 3001;
@@ -46,14 +54,15 @@ app.get("/api/state", (req, res) => {
   }));
 });
 
+
 app.post("/api/auth/login", (req, res) => {
   req.session.signed_in = true;
   res.send(JSON.stringify({
-    "success": true
+    "success": false,
+    "error": "Those credentials are not valid"
   }));
 });
 
 http.listen(app_port, () => {
   console.log('listening on *:' + app_port);
-
 });

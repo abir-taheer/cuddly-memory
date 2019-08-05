@@ -16,6 +16,7 @@ export class AppProvider extends React.Component {
     super(props);
 
     this.updateState = () => {
+      this.setState({initialized: false});
       fetch('/api/state')
           .then(response => response.json())
           .then(data => {

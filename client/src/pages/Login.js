@@ -2,7 +2,7 @@ import React from 'react';
 import {NavBar} from "../comp/NavBar";
 import {AppContext} from "../comp/AppProvider";
 
-import {Link, withRouter} from 'react-router-dom';
+import {Redirect} from 'react-router-dom';
 
 import {Card, CardActions} from '@rmwc/card';
 import {Button} from "@rmwc/button";
@@ -38,6 +38,7 @@ export class LoginBox extends React.Component {
     super(props);
     this.state = {
       isLogin: true,
+      success: false,
       onSubmit: () => {}
     };
     this.setSubmit = func => {
@@ -46,37 +47,53 @@ export class LoginBox extends React.Component {
     this.switchForm = () => {
       this.setState({isLogin: ! this.state.isLogin});
     };
+    this.setSuccess = (val) => {
+      this.setState({success: val});
+    };
 
   }
 
 
   render (){
     return (
-        <Card style={{ width: '22rem' }}>
-          <h1>{this.state.isLogin ? "Login": "Sign Up"}</h1>
+        <div>
+          <AppContext.Consumer>
+            { (context) => {
+                if( this.state.success ){
+                  this.setSuccess(false);
+                  context.updateState();
+                }
+                if( context.state.signed_in ){
+                  return <Redirect to="/" />
+                }
+            }}
+          </AppContext.Consumer>
+          <Card style={{ width: '22rem' }}>
+            <h1>{this.state.isLogin ? "Login": "Sign Up"}</h1>
 
-          {( this.state.isLogin ) ?
-              (<LoginForm setSubmit={this.setSubmit}/>) :
-              (<SignUpForm setSubmit={this.setSubmit}/>)
-          }
+            {( this.state.isLogin ) ?
+                (<LoginForm setSubmit={this.setSubmit} setSuccess={this.setSuccess}/>) :
+                (<SignUpForm setSubmit={this.setSubmit} setSuccess={this.setSuccess}/>)
+            }
 
-          <CardActions>
+            <CardActions>
 
-            <div style={{marginLeft: "8%"}}>
-            <Button raised onClick={this.state.onSubmit}>
-              {this.state.isLogin ? "Login": "Sign Up"}
-            </Button>
+              <div style={{marginLeft: "8%"}}>
+              <Button raised onClick={this.state.onSubmit}>
+                {this.state.isLogin ? "Login": "Sign Up"}
+              </Button>
 
-            &nbsp;&nbsp;
+              &nbsp;&nbsp;
 
-            <Button onClick={this.switchForm}>
-              {this.state.isLogin ? "Sign Up": "Login"} Instead
-            </Button>
+              <Button onClick={this.switchForm}>
+                {this.state.isLogin ? "Sign Up": "Login"} Instead
+              </Button>
 
-            </div>
-          </CardActions>
-          <Spacer height={"12px"}/>
-        </Card>
+              </div>
+            </CardActions>
+            <Spacer height={"12px"}/>
+          </Card>
+        </div>
     )
   }
 }
@@ -112,11 +129,7 @@ class LoginForm extends React.Component {
                 ]
               });
             } else {
-              const Users = () => {
-                const contextValue = React.useContext(AppContext);
-                console.log(contextValue);
-              };
-              Users();
+              this.props.setSuccess(true);
             }
           });
     });
