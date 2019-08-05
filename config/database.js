@@ -1,15 +1,16 @@
 const mysql = require("mysql");
 
-const con = mysql.createPool({
-  connectionLimit: 15,
+const pool = mysql.createPool({
+  connectionLimit: 50,
   host: "localhost",
   user: "myuser",
   password: "!Mypassword1",
   database: "cuddly_memory"
 });
 
-con.connect(function(err) {
+pool.getConnection(function(err, connection) {
   if (err) throw err;
+  connection.release();
 });
 
-module.exports = con;
+module.exports = pool;
