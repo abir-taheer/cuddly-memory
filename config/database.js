@@ -9,4 +9,8 @@ const credentials = {
 
 const con = mysql.createConnection(credentials);
 
+con.connect(function(err) {
+  if (err) throw err;
+});
+
 module.exports = con;
