@@ -61,21 +61,22 @@ app.route("/api/auth/login").post((req, res) => {
     con.query("SELECT * FROM `users` WHERE `user_email` = ?", req.body.username, (err, row) => {
       if( row.length === 0 ){
         res.send(fail);
-        return;
+      } else {
+        bcrypt.compare(req.body.password, row[0].user_password, function(err, valid) {
+          if(valid){
+            req.session.signed_in = true;
+            req.session.user_name = row[0].user_name;
+            req.session.user_id = row[0].user_id;
+            res.send(success);
+          } else {
+            res.send(fail);
+          }
+        });
       }
 
-      bcrypt.compare(req.body.password, row[0].user_password, function(err, valid) {
-        if(valid){
-          req.session.signed_in = true;
-          req.session.user_name = row[0].user_name;
-          req.session.user_id = row[0].user_id;
-          res.send(success);
-        } else {
-          res.send(fail);
-        }
-      });
-
     });
+
+    con.release();
   });
 });
 
