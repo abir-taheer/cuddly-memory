@@ -18,6 +18,15 @@ const session = require('express-session')({
   }
 });
 
+const genString = len => {
+  const chars = "abcdefghijklmnopqrstuvwxyz1234567890";
+  let str = "";
+  for(let x = 0; x < len; x++ ){
+    str += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return str;
+};
+
 const app_port = 3001;
 
 app.use(session);
@@ -56,9 +65,9 @@ app.route("/api/state").get((req, res) => {
 
 app.route("/api/auth/login").post((req, res) => {
   let success = JSON.stringify({success: true});
-  let fail = JSON.stringify({success: false, error: "There is no user with those credentials"});
+  let fail = JSON.stringify({success: false, error: "Those credentials are invalid. Please try again."});
   pool.getConnection((err, con) => {
-    con.query("SELECT * FROM `users` WHERE `user_email` = ?", req.body.username, (err, row) => {
+    con.query("SELECT * FROM `users` WHERE `user_email` = ?", [req.body.username], (err, row) => {
       if( row.length === 0 ){
         res.send(fail);
       } else {
@@ -78,6 +87,47 @@ app.route("/api/auth/login").post((req, res) => {
 
     con.release();
   });
+});
+
+app.route("/api/auth/signup").post((req, res) => {
+  const emailRegexp = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  let response = {success: false};
+  if( ! emailRegexp.test(req.body.email) ){
+    response.error = "The email address provided is not valid.";
+    return res.send(JSON.stringify(response));
+  }
+
+  if( req.body.password === "" || req.body.name === "" || req.body.email === "" ) {
+    response.error = "No fields can be left blank";
+    return res.send(JSON.stringify(response));
+  }
+
+  if( req.body.name.length > 25 ){
+    response.error = "Name field cannot be longer than 25 characters";
+    return res.send(JSON.stringify(response));
+  }
+
+  pool.getConnection((err, con) => {
+    con.query("SELECT * FROM `users` WHERE `user_email` = ?", [req.body.email], (err, rows) => {
+      if( rows.length > 0 ){
+        response.error = "There is already an account associated with that email address";
+        res.send(JSON.stringify(response));
+      } else {
+        let user_id = genString(16);
+        bcrypt.hash(req.body.password, 12, function(err, hash) {
+          con.query(
+              "INSERT INTO `users` (`user_id`, `user_name`, `user_email`, `user_password`) VALUES(?,?,?,?)",
+              [user_id, req.body.name, req.body.email, hash]);
+          req.session.signed_in = true;
+          req.session.user_name = req.body.name;
+          req.session.user_id = user_id;
+          res.send(JSON.stringify({success: true}));
+        });
+      }
+    });
+    con.release();
+  });
+
 });
 
 app.route("/api/auth/logout").get((req, res) => {

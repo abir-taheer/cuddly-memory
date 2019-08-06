@@ -173,13 +173,81 @@ class LoginForm extends React.Component {
 class SignUpForm extends React.Component {
   constructor(props) {
     super(props);
+    this.state = {
+      form: {
+        email: "",
+        name: "",
+        password: ""
+      }
+    };
     props.setSubmit(() => {
-      alert("banana");
-    })
+      fetch("/api/auth/signup", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(this.state.form),
+      })
+          .then(response => response.json())
+          .then( data => {
+            if( ! data.success ){
+              Queue.notify({
+                body: data.error,
+                actions: [
+                  {
+                    "icon": "close"
+                  }
+                ]
+              });
+            } else {
+              this.props.setSuccess(true);
+            }
+          });
+    });
+
+
+    this.updateField = ev => {
+      let data = this.state.form;
+      data[ev.target.name] = ev.target.value;
+      this.setState({form: data});
+    };
   }
 
 
   render() {
-    return (<h1>hello</h1>)
+    return (
+        <form>
+          <TextField
+              outlined
+              type={"text"}
+              style={{ width: '80%' }}
+              label="Full Name"
+              name="name"
+              value={this.state.form.name}
+              onChange={this.updateField}
+          />
+          <Spacer height={"12px"}/>
+          <TextField
+              outlined
+              type={"email"}
+              style={{ width: '80%' }}
+              label="Email Address"
+              name="email"
+              value={this.state.form.email}
+              onChange={this.updateField}
+          />
+          <Spacer height={"12px"}/>
+          <TextField
+              outlined
+              style={{ width: '80%' }}
+              label="Password"
+              type="password"
+              name="password"
+              value={this.state.form.password}
+              onChange={this.updateField}
+          />
+          <Spacer height={"12px"}/>
+        </form>
+    )
   }
 }
