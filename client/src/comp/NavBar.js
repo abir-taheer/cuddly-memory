@@ -36,10 +36,16 @@ export class NavBar extends React.Component {
         return (
             <div>
                 <Drawer modal open={this.state.DrawerIsOpen} onClose={() => this.toggleDrawer(false)}>
-                    <DrawerHeader>
-                        <DrawerTitle>DrawerHeader</DrawerTitle>
-                        <DrawerSubtitle>Subtitle</DrawerSubtitle>
-                    </DrawerHeader>
+                    <AppContext.Consumer>
+                        {(context) => {
+                            return (
+                                <DrawerHeader>
+                                    <DrawerTitle>{context.app_title}</DrawerTitle>
+                                    <DrawerSubtitle>{context.state.signed_in ? "Signed in as " + context.state.name : "Not Signed In"}</DrawerSubtitle>
+                                </DrawerHeader>
+                            );
+                        }}
+                    </AppContext.Consumer>
                     <DrawerContent>
                         <List>
                             {/*LogIn Button*/}
@@ -52,9 +58,27 @@ export class NavBar extends React.Component {
                                         null;
                                 }}
                             </AppContext.Consumer>
+
                             <Link to="/">
                                 <ListItem>
                                     Home
+                                </ListItem>
+                            </Link>
+                            <Link to="/my-games">
+                                <ListItem>
+                                    My Games
+                                </ListItem>
+                            </Link>
+
+                            <Link to="/">
+                                <ListItem>
+                                    Create Game
+                                </ListItem>
+                            </Link>
+
+                            <Link to="/">
+                                <ListItem>
+                                    Join Game
                                 </ListItem>
                             </Link>
 

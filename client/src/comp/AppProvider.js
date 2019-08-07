@@ -21,12 +21,25 @@ export class AppProvider extends React.Component {
           .then(response => response.json())
           .then(data => {
             this.setState({ state: data });
-            this.setState({initialized: true})
+            this.setState({initialized: true});
+          })
+          .catch((err) => {
+            this.setState({error: true, errorCountdown: 3});
+            let countdown = setInterval(() => {
+              this.setState({errorCountdown: (this.state.errorCountdown - 1)});
+              if( this.state.errorCountdown === 0 ){
+                clearInterval(countdown);
+                this.setState({error: false});
+                this.updateState();
+              }
+            }, 1000);
           });
     };
 
     this.state = {
       initialized:  false,
+      setupError: false,
+      errorCountdown: 0,
       app_title: "cuddly-memory",
       state: {},
       updateState: this.updateState
@@ -39,11 +52,16 @@ export class AppProvider extends React.Component {
   }
 
   render() {
+    const errorText = (this.state.error) ? <p className={"text-center"}>There was an error loading the app.<br/>Trying again in {this.state.errorCountdown} seconds.</p> : null;
+
 
     if( ! this.state.initialized ){
       return (
-          <div className="Loading">
-            <CircularProgress size={72} />
+          <div>
+            <div className="Loading">
+              <CircularProgress size={72} />
+            </div>
+            {errorText}
           </div>
       )
     }

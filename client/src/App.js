@@ -3,6 +3,7 @@ import {Route, BrowserRouter as Router} from 'react-router-dom';
 import './App.css';
 import {Landing} from './pages/Landing';
 import {Login} from './pages/Login';
+import {MyGames} from "./pages/MyGames";
 
 import { SnackbarQueue } from "@rmwc/snackbar";
 import '@material/snackbar/dist/mdc.snackbar.css';
@@ -18,6 +19,7 @@ function App() {
           <div>
             <Route exact path="/" component={Landing}/>
             <Route exact path="/login" component={Login}/>
+            <Route path="/my-games" component={MyGames} />
           </div>
         </Router>
         <SnackbarQueue messages={Queue.messages} />

@@ -1,4 +1,5 @@
 const db = require("./../config/database");
+const bcrypt = require("bcrypt");
 
 const User = {
   getByEmail: (email) => {
@@ -8,7 +9,14 @@ const User = {
             (err) ? reject(err) : resolve(rows);
           });
     });
+  },
+  testPassword: (password, hash) => {
+    return new Promise((resolve, reject) => {
+      bcrypt.compare(password, hash, (err, valid) => {
+        (err) ? reject(err) : resolve(valid);
+      });
+    });
   }
 };
 
-User.getByEmail("abir488@gmail.com").then((email) => {console.log(email)});
+module.exports = User;

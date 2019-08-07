@@ -1,4 +1,5 @@
-const pool = require("./config/database.js");
+const db = require("./config/database");
+const emailer = require("./config/email");
 
 const bcrypt = require("bcrypt");
 const bodyParser = require("body-parser");
@@ -17,6 +18,8 @@ const session = require('express-session')({
     maxAge: (30 * 86400 * 1000)
   }
 });
+
+const User = require("./models/user");
 
 const genString = len => {
   const chars = "abcdefghijklmnopqrstuvwxyz1234567890";
@@ -44,7 +47,7 @@ io.use(shared_session(session, {
 
 
 io.on('connection', socket => {
-
+  console.log("someone connected");
   socket.handshake.session.username = "Test Name";
   socket.handshake.session.save();
 
@@ -66,39 +69,41 @@ app.route("/api/state").get((req, res) => {
 app.route("/api/auth/login").post((req, res) => {
   let success = JSON.stringify({success: true});
   let fail = JSON.stringify({success: false, error: "Those credentials are invalid. Please try again."});
-  pool.getConnection((err, con) => {
-    con.query("SELECT * FROM `users` WHERE `user_email` = ?", [req.body.username], (err, row) => {
-      if( row.length === 0 ){
+
+  User.getByEmail(req.body.username)
+      .then(rows => {
+        if( rows.length === 0 ){
+          res.send(fail);
+        } else {
+          User.testPassword(req.body.password, rows[0].user_password)
+              .then((isValid) => {
+                if(isValid){
+                  req.session.signed_in = true;
+                  req.session.user_name = rows[0].user_name;
+                  req.session.user_id = rows[0].user_id;
+                  res.send(success);
+                } else {
+                  res.send(fail);
+                }
+              });
+        }
+      })
+      .catch(() => {
         res.send(fail);
-      } else {
-        bcrypt.compare(req.body.password, row[0].user_password, function(err, valid) {
-          if(valid){
-            req.session.signed_in = true;
-            req.session.user_name = row[0].user_name;
-            req.session.user_id = row[0].user_id;
-            res.send(success);
-          } else {
-            res.send(fail);
-          }
-        });
-      }
-
-    });
-
-    con.release();
-  });
+      });
 });
 
 app.route("/api/auth/signup").post((req, res) => {
-  const emailRegexp = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
   let response = {success: false};
-  if( ! emailRegexp.test(req.body.email) ){
-    response.error = "The email address provided is not valid.";
-    return res.send(JSON.stringify(response));
-  }
 
   if( req.body.password === "" || req.body.name === "" || req.body.email === "" ) {
     response.error = "No fields can be left blank";
+    return res.send(JSON.stringify(response));
+  }
+
+  const emailRegexp = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  if( ! emailRegexp.test(req.body.email) ){
+    response.error = "The email address provided is not valid.";
     return res.send(JSON.stringify(response));
   }
 
@@ -107,7 +112,7 @@ app.route("/api/auth/signup").post((req, res) => {
     return res.send(JSON.stringify(response));
   }
 
-  pool.getConnection((err, con) => {
+  db.pool.getConnection((err, con) => {
     con.query("SELECT * FROM `users` WHERE `user_email` = ?", [req.body.email], (err, rows) => {
       if( rows.length > 0 ){
         response.error = "There is already an account associated with that email address";
@@ -133,6 +138,12 @@ app.route("/api/auth/signup").post((req, res) => {
 app.route("/api/auth/logout").get((req, res) => {
   req.session.destroy();
   res.send(JSON.stringify({signed_out: true}));
+});
+
+app.route("/api/user/games").get((req, res) => {
+  if( req.session.signed_in ){
+
+  }
 });
 
 http.listen(app_port, () => {
