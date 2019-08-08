@@ -100,9 +100,7 @@ app.route("/api/auth/signup").post((req, res) => {
     response.error = "No fields can be left blank";
     return res.send(JSON.stringify(response));
   }
-
-  const emailRegexp = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-  if( ! emailRegexp.test(req.body.email) ){
+  if( ! User.validateEmail(req.body.email) ){
     response.error = "The email address provided is not valid.";
     return res.send(JSON.stringify(response));
   }
@@ -112,25 +110,18 @@ app.route("/api/auth/signup").post((req, res) => {
     return res.send(JSON.stringify(response));
   }
 
-  db.pool.getConnection((err, con) => {
-    con.query("SELECT * FROM `users` WHERE `user_email` = ?", [req.body.email], (err, rows) => {
-      if( rows.length > 0 ){
-        response.error = "There is already an account associated with that email address";
-        res.send(JSON.stringify(response));
-      } else {
-        let user_id = genString(16);
-        bcrypt.hash(req.body.password, 12, function(err, hash) {
-          con.query(
-              "INSERT INTO `users` (`user_id`, `user_name`, `user_email`, `user_password`) VALUES(?,?,?,?)",
-              [user_id, req.body.name, req.body.email, hash]);
+  User.getByEmail(req.body.email).then(rows => {
+    let user_id = genString(16);
+    User.newUser(user_id, req.body.name, req.body.email, req.body.password)
+        .then(()=>{
           req.session.signed_in = true;
           req.session.user_name = req.body.name;
           req.session.user_id = user_id;
           res.send(JSON.stringify({success: true}));
+        })
+        .catch((err) => {
+          response.error = err;
         });
-      }
-    });
-    con.release();
   });
 
 });
@@ -142,7 +133,7 @@ app.route("/api/auth/logout").get((req, res) => {
 
 app.route("/api/user/games").get((req, res) => {
   if( req.session.signed_in ){
-
+    // Query the database for any games that the user may be a part of
   }
 });
 

@@ -69,12 +69,12 @@ export class LoginBox extends React.Component {
           </AppContext.Consumer>
           <Card style={{ width: '22rem' }}>
             <h1>{this.state.isLogin ? "Login": "Sign Up"}</h1>
-
-            {( this.state.isLogin ) ?
-                (<LoginForm setSubmit={this.setSubmit} setSuccess={this.setSuccess}/>) :
-                (<SignUpForm setSubmit={this.setSubmit} setSuccess={this.setSuccess}/>)
-            }
-
+            <form onSubmit={this.state.onSubmit}>
+              {( this.state.isLogin ) ?
+                  (<LoginForm setSubmit={this.setSubmit} setSuccess={this.setSuccess}/>) :
+                  (<SignUpForm setSubmit={this.setSubmit} setSuccess={this.setSuccess}/>)
+              }
+            </form>
             <CardActions>
 
               <div style={{marginLeft: "8%"}}>
@@ -144,7 +144,7 @@ class LoginForm extends React.Component {
 
   render() {
     return (
-        <form>
+        <div>
           <TextField
               outlined
               type={"email"}
@@ -165,7 +165,7 @@ class LoginForm extends React.Component {
               onChange={this.updateField}
           />
           <Spacer height={"12px"}/>
-        </form>
+        </div>
     )
   }
 }
@@ -216,7 +216,7 @@ class SignUpForm extends React.Component {
 
   render() {
     return (
-        <form>
+        <div>
           <TextField
               outlined
               type={"text"}
@@ -247,7 +247,7 @@ class SignUpForm extends React.Component {
               onChange={this.updateField}
           />
           <Spacer height={"12px"}/>
-        </form>
+        </div>
     )
   }
 }

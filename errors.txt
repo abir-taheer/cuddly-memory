@@ -1,0 +1,2 @@
+Fri Aug 09 2019: Error: ER_PARSE_ERROR: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'ij' at line 1
+Fri Aug 09 2019: Error: ER_PARSE_ERROR: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'ij' at line 1
