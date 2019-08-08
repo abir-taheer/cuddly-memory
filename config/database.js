@@ -1,4 +1,5 @@
 const mysql = require("mysql");
+const logError = require("./../errors");
 
 const pool = mysql.createPool({
   connectionLimit: 50,
@@ -8,12 +9,13 @@ const pool = mysql.createPool({
   database: "cuddly_memory"
 });
 
+
 pool.getConnection(function(err, connection) {
   if (err) throw err;
   connection.release();
 });
 
-const promiseQuery = (query, params = []) => {
+const promiseQuery = (query, params) => {
   let conn;
   return new Promise((resolve, reject) => {
     pool.getConnection((err, c) => {
@@ -24,7 +26,8 @@ const promiseQuery = (query, params = []) => {
       } else {
         conn.query(query, params, (err, rows) => {
           if(err){
-            reject(err);
+            logError("promiseQuery - " +  err );
+            reject("Error performing action on database");
           } else {
             resolve(rows);
           }
