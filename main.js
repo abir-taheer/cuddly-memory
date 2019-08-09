@@ -70,7 +70,7 @@ app.route("/api/auth/login").post((req, res) => {
   let success = JSON.stringify({success: true});
   let fail = JSON.stringify({success: false, error: "Those credentials are invalid. Please try again."});
 
-  User.getByEmail(req.body.username)
+  User.getByEmail(req.body.email)
       .then(rows => {
         if( rows.length === 0 ){
           res.send(fail);

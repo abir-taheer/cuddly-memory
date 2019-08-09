@@ -19,6 +19,7 @@ import '@material/line-ripple/dist/mdc.line-ripple.css';
 
 import {Queue} from "../comp/Queue";
 
+
 export class Login extends React.Component {
   render () {
     return (
@@ -38,150 +39,20 @@ export class LoginBox extends React.Component {
     super(props);
     this.state = {
       isLogin: true,
-      success: false,
-      onSubmit: () => {}
+      form: {}
     };
-    this.setSubmit = func => {
-      this.setState({onSubmit: func});
-    };
+
     this.switchForm = () => {
-      this.setState({isLogin: ! this.state.isLogin});
-    };
-    this.setSuccess = (val) => {
-      this.setState({success: val});
+      this.setState({isLogin: ! this.state.isLogin, form: {}});
     };
 
-  }
-
-
-  render (){
-    return (
-        <div>
-          <AppContext.Consumer>
-            { (context) => {
-                if( this.state.success ){
-                  context.updateState();
-                }
-                if( context.state.signed_in ){
-                  return <Redirect to="/" />
-                }
-            }}
-          </AppContext.Consumer>
-          <Card style={{ width: '22rem' }}>
-            <h1>{this.state.isLogin ? "Login": "Sign Up"}</h1>
-            <form onSubmit={this.state.onSubmit}>
-              {( this.state.isLogin ) ?
-                  (<LoginForm setSubmit={this.setSubmit} setSuccess={this.setSuccess}/>) :
-                  (<SignUpForm setSubmit={this.setSubmit} setSuccess={this.setSuccess}/>)
-              }
-            </form>
-            <CardActions>
-
-              <div style={{marginLeft: "8%"}}>
-              <Button raised onClick={this.state.onSubmit}>
-                {this.state.isLogin ? "Login": "Sign Up"}
-              </Button>
-
-              &nbsp;&nbsp;
-
-              <Button onClick={this.switchForm}>
-                {this.state.isLogin ? "Sign Up": "Login"} Instead
-              </Button>
-
-              </div>
-            </CardActions>
-            <Spacer height={"12px"}/>
-          </Card>
-        </div>
-    )
-  }
-}
-
-
-class LoginForm extends React.Component {
-  constructor(props) {
-    super(props);
-
-    this.state = {
-      username: "",
-      password: ""
+    this.setForm = (val) => {
+      this.setState({form: val});
     };
 
-    props.setSubmit(() => {
-      // Perform a post request to the login api
-      fetch("/api/auth/login", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(this.state),
-      })
-          .then(response => response.json())
-          .then( data => {
-            if( ! data.success ){
-              Queue.notify({
-                body: data.error,
-                actions: [
-                  {
-                    "icon": "close"
-                  }
-                ]
-              });
-            } else {
-              this.props.setSuccess(true);
-            }
-          });
-    });
-
-    this.updateField = ev => {
-      let data = {};
-      data[ev.target.name]  = ev.target.value;
-      this.setState(data);
-    };
-
-  }
-
-
-  render() {
-    return (
-        <div>
-          <TextField
-              outlined
-              type={"email"}
-              style={{ width: '80%' }}
-              label="Username or Email"
-              name="username"
-              value={this.state.username}
-              onChange={this.updateField}
-          />
-          <Spacer height={"12px"}/>
-          <TextField
-              outlined
-              style={{ width: '80%' }}
-              label="Password"
-              type="password"
-              name="password"
-              value={this.state.password}
-              onChange={this.updateField}
-          />
-          <Spacer height={"12px"}/>
-        </div>
-    )
-  }
-}
-
-class SignUpForm extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      form: {
-        email: "",
-        name: "",
-        password: ""
-      }
-    };
-    props.setSubmit(() => {
-      fetch("/api/auth/signup", {
+    this.submitForm = () => {
+      let api_path = "/api/auth/" + ((this.state.isLogin) ? "login" : "signup");
+      fetch(api_path, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -200,16 +71,104 @@ class SignUpForm extends React.Component {
                 ]
               });
             } else {
-              this.props.setSuccess(true);
+              this.context.updateState();
             }
           });
-    });
+    };
+  }
 
 
+  render (){
+
+    return (
+        <div>
+          <AppContext.Consumer>
+            { (context) => {
+                if( context.state.signed_in ){
+                  return <Redirect to="/" />
+                }
+            }}
+          </AppContext.Consumer>
+          <Card style={{ width: '22rem' }}>
+            <h1>{this.state.isLogin ? "Login": "Sign Up"}</h1>
+            <form onSubmit={this.submitForm}>
+              {( this.state.isLogin ) ?
+                  (<LoginForm  form={this.state.form} setForm={this.setForm} />) :
+                  (<SignUpForm  form={this.state.form} setForm={this.setForm} />)
+              }
+            </form>
+            <CardActions>
+
+              <div style={{marginLeft: "8%"}}>
+              <Button raised onClick={this.submitForm}>
+                {this.state.isLogin ? "Login": "Sign Up"}
+              </Button>
+
+              &nbsp;&nbsp;
+
+              <Button onClick={this.switchForm}>
+                {this.state.isLogin ? "Sign Up": "Login"} Instead
+              </Button>
+
+              </div>
+            </CardActions>
+            <Spacer height={"12px"}/>
+          </Card>
+        </div>
+    )
+  }
+}
+LoginBox.contextType = AppContext;
+
+
+class LoginForm extends React.Component {
+  constructor(props) {
+    super(props);
+    props.setForm({email: "", password: ""});
     this.updateField = ev => {
-      let data = this.state.form;
+      let data = props.form;
       data[ev.target.name] = ev.target.value;
-      this.setState({form: data});
+      props.setForm(data);
+    };
+  }
+
+  render() {
+    return (
+        <div>
+          <TextField
+              outlined
+              type={"email"}
+              style={{ width: '80%' }}
+              label="Email Address"
+              name="email"
+              value={this.props.form.email || ''}
+              onChange={this.updateField}
+          />
+          <Spacer height={"12px"}/>
+          <TextField
+              outlined
+              style={{ width: '80%' }}
+              label="Password"
+              type="password"
+              name="password"
+              value={this.props.form.password || ''}
+              onChange={this.updateField}
+          />
+          <Spacer height={"12px"}/>
+        </div>
+    )
+  }
+}
+
+class SignUpForm extends React.Component {
+  constructor(props) {
+    super(props);
+
+    props.setForm({email: "", name: "", password: ""});
+    this.updateField = ev => {
+      let data = props.form;
+      data[ev.target.name] = ev.target.value;
+      props.setForm(data);
     };
   }
 
@@ -223,7 +182,7 @@ class SignUpForm extends React.Component {
               style={{ width: '80%' }}
               label="Full Name"
               name="name"
-              value={this.state.form.name}
+              value={this.props.form.name || ''}
               onChange={this.updateField}
           />
           <Spacer height={"12px"}/>
@@ -233,7 +192,7 @@ class SignUpForm extends React.Component {
               style={{ width: '80%' }}
               label="Email Address"
               name="email"
-              value={this.state.form.email}
+              value={this.props.form.email || ''}
               onChange={this.updateField}
           />
           <Spacer height={"12px"}/>
@@ -243,7 +202,7 @@ class SignUpForm extends React.Component {
               label="Password"
               type="password"
               name="password"
-              value={this.state.form.password}
+              value={this.props.form.password || ''}
               onChange={this.updateField}
           />
           <Spacer height={"12px"}/>
