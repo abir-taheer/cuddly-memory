@@ -1,8 +1,6 @@
 const db = require("./../config/database");
 const bcrypt = require("bcrypt");
 
-
-
 const getByEmail = (email) => {
   return new Promise((resolve, reject) => {
     db.promiseQuery("SELECT * FROM `users` WHERE `user_email` = ? ", [email])
@@ -53,6 +51,9 @@ const User = {
   validateEmail: (email) => {
     const emailRegexp = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
     return emailRegexp.test(email);
+  },
+  getGames: () => {
+
   }
 };
 

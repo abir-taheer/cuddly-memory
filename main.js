@@ -111,7 +111,7 @@ app.route("/api/auth/signup").post((req, res) => {
   }
 
   User.getByEmail(req.body.email).then(rows => {
-    let user_id = genString(16);
+    let user_id = genString(8);
     User.newUser(user_id, req.body.name, req.body.email, req.body.password)
         .then(()=>{
           req.session.signed_in = true;
