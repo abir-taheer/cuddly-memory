@@ -20,6 +20,8 @@ const session = require('express-session')({
 });
 
 const User = require("./models/user");
+const Game = require("./models/game");
+const logError = require("./errors");
 
 const genString = len => {
   const chars = "abcdefghijklmnopqrstuvwxyz1234567890";
@@ -132,9 +134,28 @@ app.route("/api/auth/logout").get((req, res) => {
 });
 
 app.route("/api/user/games").get((req, res) => {
-  if( req.session.signed_in ){
-    // Query the database for any games that the user may be a part of
-  }
+  (async () => {
+    if( typeof req.session.games === 'undefined' ){
+      req.session.games = {};
+    }
+    if(req.session.signed_in){
+      let user_games = await User.getGames(req.session.user_id);
+      Object.keys(user_games).forEach((key) => {
+        req.session.games[key] = user_games[key];
+      });
+    }
+
+    let current_games = [];
+
+    for(let game_id in req.session.games) {
+      if(req.session.games.hasOwnProperty(game_id)){
+        let game_data = await Game.byId(game_id);
+        current_games.push(game_data[0]);
+      }
+    }
+    res.send(JSON.stringify(current_games));
+
+  })();
 });
 
 http.listen(app_port, () => {

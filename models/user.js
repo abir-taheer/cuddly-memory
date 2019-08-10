@@ -1,5 +1,7 @@
 const db = require("./../config/database");
 const bcrypt = require("bcrypt");
+const logError = require("./../errors");
+
 
 const getByEmail = (email) => {
   return new Promise((resolve, reject) => {
@@ -52,8 +54,25 @@ const User = {
     const emailRegexp = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
     return emailRegexp.test(email);
   },
-  getGames: () => {
-
+  getGames: (id) => {
+    return new Promise( (resolve, reject) => {
+      db.promiseQuery("SELECT gp.game_id as `game`, gp.player_id as `player` FROM `game_players` gp INNER JOIN `games` g ON g.game_id = gp.game_id WHERE gp.player_user_id = ? AND g.game_status = '1' AND gp.player_status = '1'",
+          [id]).then((games, err) => {
+            let games_user = {};
+            if(err) {
+              reject(err);
+            } else {
+              for( let x = 0; x < games.length; x++){
+                try {
+                  games_user[games[x]["game"]] = games[x]["player"];
+                } catch(err) {
+                    logError("Fetching games for user "+ id + err);
+                }
+              }
+              resolve(games_user);
+            }
+      });
+    });
   }
 };
 
