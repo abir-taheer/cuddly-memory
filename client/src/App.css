@@ -12,6 +12,28 @@
   justify-content: center;
 }
 
+.sub-container {
+  width: 90%;
+  margin-left: 5%;
+}
+
+@media only screen and (max-width: 600px) {
+  .medium-width {
+    width: 90%;
+  }
+}
+
+@media only screen and (min-width: 601px) {
+  .medium-width {
+    width: 600px;
+  }
+}
+
+
+.medium-width {
+
+}
+
 .text-center {
   text-align: center;
 }
