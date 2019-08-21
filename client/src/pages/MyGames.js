@@ -1,4 +1,5 @@
 import React from 'react';
+import {Link} from "react-router-dom";
 
 import {CircularProgress} from '@rmwc/circular-progress';
 import '@rmwc/circular-progress/circular-progress.css';
@@ -11,10 +12,6 @@ import '@material/list/dist/mdc.list.css';
 
 import {Card} from "@rmwc/card";
 import '@material/card/dist/mdc.card.css';
-
-
-// import socketIOClient from "socket.io-client";
-// const queryString = require('query-string');
 
 import {NavBar} from "../comp/NavBar";
 import {Spacer} from "../comp/Spacer";
@@ -47,6 +44,9 @@ export class MyGames extends React.Component {
             this.setState({error: true});
           });
     };
+  }
+
+  componentDidMount() {
     this.getGames();
   }
 
@@ -99,16 +99,34 @@ export class MyGames extends React.Component {
 }
 
 class GamesList extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      clicked: false,
+      clicked_game: ""
+    };
+  }
+
   render() {
-    let items = this.props.games.map((data) =>
-        <SimpleListItem
-            graphic="touch_app"
-            text={data.game_name}
-            secondaryText={new Date(data.game_created_datetime).toDateString()}
-        />
+    let items = this.props.games.map((data, index) =>
+        <Link to={"/play?game=" + data.game_id} key={index} className={["no-decoration"]}>
+          <SimpleListItem
+              graphic="touch_app"
+              text={data.game_name}
+              secondaryText={new Date(data.game_created_datetime).toDateString()}
+          />
+        </Link>
     );
+
+    if(this.props.games.length === 0){
+      return (
+          <div>
+            <p>You don't have any in-progress games</p>
+          </div>
+      )
+    }
     return(
-        <List>
+        <List twoLine>
           {items}
         </List>
     )

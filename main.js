@@ -1,16 +1,28 @@
 const db = require("./config/database");
 const emailer = require("./config/email");
 
-const bcrypt = require("bcrypt");
 const bodyParser = require("body-parser");
-const app = require("express")();
+const path = require("path");
+const express = require("express");
+const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
-const session = require('express-session')({
-  secret: (Math.random().toString() + Math.random().toString()),
+const expressSession = require("express-session");
+
+const MySQLStore = require('express-mysql-session')(expressSession);
+const sessionStore = new MySQLStore({
+  clearExpired: true,
+  checkExpirationInterval: 900000,
+  expiration: (30 * 86400 * 1000),
+  createDatabaseTable: true,
+}, db.pool);
+
+const session = expressSession({
+  secret: "some_semi_permanent_not_so_secret_secret",
   name: "session",
   resave: true,
   saveUninitialized: true,
+  store: sessionStore,
   cookie: {
     path: '/',
     httpOnly: true,
@@ -32,11 +44,12 @@ const genString = len => {
   return str;
 };
 
-const app_port = 3001;
+const app_port = process.env.PORT || 3001;
 
 app.use(session);
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname, 'client/build')));
 
 const shared_session = require("express-socket.io-session");
 
@@ -50,112 +63,135 @@ io.use(shared_session(session, {
 
 io.on('connection', socket => {
   console.log("someone connected");
-  socket.handshake.session.username = "Test Name";
-  socket.handshake.session.save();
+  // socket.handshake.session.username = "Test Name";
+  // socket.handshake.session.save();
 
   socket.on("disconnect", () => {
     console.log("A user disconnected.");
   });
 
+  socket.on("join", (game_id) => {
+    console.log(socket.handshake.session.user_name + " attempted to join game " + game_id);
+    
+  });
 });
 
 // Called when the user first opens the app
 app.route("/api/state").get((req, res) => {
-  res.send(JSON.stringify({
+  res.json({
     "signed_in": (req.session.signed_in || false),
     "name": (req.session.user_name || "Guest")
-  }));
+  });
 });
 
 
 app.route("/api/auth/login").post((req, res) => {
-  let success = JSON.stringify({success: true});
-  let fail = JSON.stringify({success: false, error: "Those credentials are invalid. Please try again."});
+  let success = {success: true};
+  let fail = {success: false, error: "Those credentials are invalid. Please try again."};
 
-  User.getByEmail(req.body.email)
+  let user_email = req.body.email || "";
+  let user_password = req.body.password || "";
+  User.getByEmail(user_email)
       .then(rows => {
         if( rows.length === 0 ){
-          res.send(fail);
+          res.json(fail);
         } else {
-          User.testPassword(req.body.password, rows[0].user_password)
+          User.testPassword(user_password, rows[0]["user_password"])
               .then((isValid) => {
                 if(isValid){
                   req.session.signed_in = true;
-                  req.session.user_name = rows[0].user_name;
-                  req.session.user_id = rows[0].user_id;
-                  res.send(success);
+                  req.session.user_name = rows[0]["user_name"];
+                  req.session.user_id = rows[0]["user_id"];
+                  res.json(success);
                 } else {
-                  res.send(fail);
+                  res.json(fail);
                 }
               });
         }
       })
-      .catch(() => {
-        res.send(fail);
+      .catch((e) => {
+        logError(e);
+        res.json(fail);
       });
 });
 
 app.route("/api/auth/signup").post((req, res) => {
   let response = {success: false};
+  let user_name = req.body.name || "";
+  let user_email = req.body.email || "";
+  let user_password = req.body.password || "";
 
-  if( req.body.password === "" || req.body.name === "" || req.body.email === "" ) {
+  if( ! (user_name && user_email && user_password) ) {
     response.error = "No fields can be left blank";
-    return res.send(JSON.stringify(response));
+    return res.json(response);
   }
-  if( ! User.validateEmail(req.body.email) ){
+  if( ! User.validateEmail(user_email) ){
     response.error = "The email address provided is not valid.";
-    return res.send(JSON.stringify(response));
+    return res.json(response);
   }
 
-  if( req.body.name.length > 25 ){
-    response.error = "Name field cannot be longer than 25 characters";
-    return res.send(JSON.stringify(response));
+  if( user_name.length > 64 ){
+    response.error = "Name field cannot be longer than 64 characters";
+    return res.json(response);
   }
 
-  User.getByEmail(req.body.email).then(rows => {
-    let user_id = genString(8);
-    User.newUser(user_id, req.body.name, req.body.email, req.body.password)
-        .then(()=>{
-          req.session.signed_in = true;
-          req.session.user_name = req.body.name;
-          req.session.user_id = user_id;
-          res.send(JSON.stringify({success: true}));
-        })
-        .catch((err) => {
-          response.error = err;
-        });
-  });
+  User.getByEmail(user_email)
+      .then(() => {
+        let user_id = genString(8);
+        User.newUser(user_id, user_name, user_email, user_password)
+            .then(()=>{
+              req.session.signed_in = true;
+              req.session.user_name = user_name;
+              req.session.user_id = user_id;
+              res.json({success: true});
+            });
+      })
+      .catch((err) => {
+        response.error = "There was an unknown error. Please contact the developer if this continues";
+        logError(err);
+        res.json(response);
+      });
 
 });
 
 app.route("/api/auth/logout").get((req, res) => {
   req.session.destroy();
-  res.send(JSON.stringify({signed_out: true}));
+  res.json({signed_out: true});
 });
 
 app.route("/api/user/games").get((req, res) => {
   (async () => {
-    if( typeof req.session.games === 'undefined' ){
-      req.session.games = {};
-    }
+    req.session.games = req.session.games || {};
+
     if(req.session.signed_in){
-      let user_games = await User.getGames(req.session.user_id);
-      Object.keys(user_games).forEach((key) => {
-        req.session.games[key] = user_games[key];
-      });
+      try {
+        let user_games = await User.getGames(req.session.user_id);
+        Object.keys(user_games).forEach((key) => {
+          req.session.games[key] = user_games[key];
+        });
+      } catch(e) {
+        logError(e);
+      }
     }
 
     let current_games = [];
 
     for(let game_id in req.session.games) {
-      if(req.session.games.hasOwnProperty(game_id)){
-        let game_data = await Game.byId(game_id);
-        current_games.push(game_data[0]);
+      try {
+        if(req.session.games.hasOwnProperty(game_id)){
+          let game_data = await Game.byId(game_id);
+          current_games.push(game_data[0]);
+        }
+      } catch(e) {
+        logError(e);
       }
     }
-    res.send(JSON.stringify(current_games));
-
+    await res.json(current_games);
   })();
+});
+
+app.route("*").get((req,res) => {
+  res.sendFile(path.join(__dirname + '/client/build/index.html'));
 });
 
 http.listen(app_port, () => {

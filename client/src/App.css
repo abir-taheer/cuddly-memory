@@ -29,6 +29,9 @@
   }
 }
 
+.no-decoration {
+  text-decoration: none;
+}
 
 .medium-width {
 

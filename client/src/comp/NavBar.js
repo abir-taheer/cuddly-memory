@@ -70,7 +70,7 @@ export class NavBar extends React.Component {
                                 </ListItem>
                             </Link>
 
-                            <Link to="/">
+                            <Link to="/create-game">
                                 <ListItem>
                                     Create Game
                                 </ListItem>
