@@ -1,5 +1,5 @@
 const db = require("./config/database");
-const emailer = require("./config/email");
+// const emailer = require("./config/email");
 
 const bodyParser = require("body-parser");
 const path = require("path");
@@ -55,25 +55,22 @@ const shared_session = require("express-socket.io-session");
 
 io.set('transports', ['websocket']);
 
-io.use(shared_session(session, {
-  autoSave: true
-}));
+io.use(shared_session(session, undefined, {autoSave: true}));
 
 
 
 io.on('connection', socket => {
-  console.log("someone connected");
-  // socket.handshake.session.username = "Test Name";
-  // socket.handshake.session.save();
+  console.log("someone joined a game");
 
   socket.on("disconnect", () => {
-    console.log("A user disconnected.");
+    console.log("A gamer disconnected.");
   });
 
   socket.on("join", (game_id) => {
     console.log(socket.handshake.session.user_name + " attempted to join game " + game_id);
     
   });
+
 });
 
 // Called when the user first opens the app
@@ -188,6 +185,11 @@ app.route("/api/user/games").get((req, res) => {
     }
     await res.json(current_games);
   })();
+});
+
+app.route("/api/game/create").post((req, res) => {
+  console.log(req.body);
+  res.json({success: true});
 });
 
 app.route("*").get((req,res) => {

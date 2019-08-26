@@ -1,8 +1,8 @@
 import React from "react";
-import socketIOClient from "socket.io-client";
 
-import {NavBar} from "../comp/NavBar";
-import {Queue} from "../comp/Queue";
+import {NavBar} from "./../comp/NavBar";
+import {Queue} from "./../comp/Queue";
+import {Game} from "./../comp/Game";
 
 const queryString = require('query-string');
 
@@ -16,21 +16,11 @@ export class Play extends React.Component {
     this.query = queryString.parse(this.props.location.search);
   }
 
-
-  componentDidMount() {
-
-    if(typeof this.query.game !== 'undefined'){
-      const socket = socketIOClient("/", {transports: ['websocket'], upgrade: false});
-      socket.emit("join", this.query.game);
-    }
-
-  }
-
   render() {
     return (
         <div>
           <NavBar/>
-          <h1>Trying to join game {this.query.game}</h1>
+          <Game id={this.query.game} />
         </div>
     )
   }
