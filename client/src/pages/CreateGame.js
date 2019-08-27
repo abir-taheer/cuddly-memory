@@ -41,9 +41,9 @@ export class CreateGame extends React.Component {
         game_name: "",
         game_type: "Standard",
         make_haiku: false,
-        points_redraw: false,
+        trade_points_redraw: false,
         rando_cardrissian: false,
-        timeout: 90,
+        turn_timer: 90,
         chat: true
       }
     };
@@ -128,7 +128,7 @@ export class CreateGame extends React.Component {
 
               <Spacer height={"20px"}/>
 
-              <TextField name={"timeout"} label={"Turn Timer"} type={"number"} min={15} max={180} value={this.state.form.timeout} onChange={this.updateForm}/>
+              <TextField name={"turn_timer"} label={"Turn Timer"} type={"number"} min={15} max={180} value={this.state.form.turn_timer} onChange={this.updateForm}/>
 
               <Spacer height={"20px"}/>
 
@@ -150,8 +150,8 @@ export class CreateGame extends React.Component {
 
               <Checkbox
                   label="Allow swapping white cards using points"
-                  name={"points_redraw"}
-                  checked={this.state.form.points_redraw}
+                  name={"trade_points_redraw"}
+                  checked={this.state.form.trade_points_redraw}
                   onChange={this.updateCheckbox}
               />
 
