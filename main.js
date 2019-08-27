@@ -1,5 +1,6 @@
 const db = require("./config/database");
 // const emailer = require("./config/email");
+const tools = require("./config/tools");
 
 const bodyParser = require("body-parser");
 const path = require("path");
@@ -35,15 +36,6 @@ const User = require("./models/user");
 const Game = require("./models/game");
 const logError = require("./errors");
 
-const genString = len => {
-  const chars = "abcdefghijklmnopqrstuvwxyz1234567890";
-  let str = "";
-  for(let x = 0; x < len; x++ ){
-    str += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return str;
-};
-
 const app_port = process.env.PORT || 3001;
 
 app.use(session);
@@ -74,6 +66,7 @@ io.on('connection', socket => {
 });
 
 // Called when the user first opens the app
+// Works -- 2019-08-27 13:23
 app.route("/api/state").get((req, res) => {
   res.json({
     "signed_in": (req.session.signed_in || false),
@@ -81,35 +74,34 @@ app.route("/api/state").get((req, res) => {
   });
 });
 
-
+// Works -- 2019-08-27 13:23
 app.route("/api/auth/login").post((req, res) => {
   let success = {success: true};
   let fail = {success: false, error: "Those credentials are invalid. Please try again."};
 
   let user_email = req.body.email || "";
   let user_password = req.body.password || "";
-  User.getByEmail(user_email)
-      .then(rows => {
-        if( rows.length === 0 ){
-          res.json(fail);
+
+  try {
+    (async () => {
+      let get_user = await User.getByEmail(user_email);
+      if(get_user) {
+        let password_valid = await User.testPassword(user_password, get_user.user_password);
+        if(password_valid){
+          req.session.signed_in = true;
+          req.session.user_name = get_user.user_name;
+          req.session.user_id = get_user.user_id;
+          await res.json(success);
         } else {
-          User.testPassword(user_password, rows[0]["user_password"])
-              .then((isValid) => {
-                if(isValid){
-                  req.session.signed_in = true;
-                  req.session.user_name = rows[0]["user_name"];
-                  req.session.user_id = rows[0]["user_id"];
-                  res.json(success);
-                } else {
-                  res.json(fail);
-                }
-              });
+          await res.json(fail);
         }
-      })
-      .catch((e) => {
-        logError(e);
-        res.json(fail);
-      });
+      } else {
+        await res.json(fail);
+      }
+    })();
+  } catch(er){
+    res.json(fail);
+  }
 });
 
 app.route("/api/auth/signup").post((req, res) => {
@@ -122,7 +114,7 @@ app.route("/api/auth/signup").post((req, res) => {
     response.error = "No fields can be left blank";
     return res.json(response);
   }
-  if( ! User.validateEmail(user_email) ){
+  if( ! tools.validateEmail(user_email) ){
     response.error = "The email address provided is not valid.";
     return res.json(response);
   }
@@ -132,25 +124,21 @@ app.route("/api/auth/signup").post((req, res) => {
     return res.json(response);
   }
 
-  User.getByEmail(user_email)
-      .then(() => {
-        let user_id = genString(8);
-        User.newUser(user_id, user_name, user_email, user_password)
-            .then(()=>{
-              req.session.signed_in = true;
-              req.session.user_name = user_name;
-              req.session.user_id = user_id;
-              res.json({success: true});
-            });
+  User.newUser(user_name, user_email, user_password)
+      .then((user_id) => {
+        req.session.signed_in = true;
+        req.session.user_name = user_name;
+        req.session.user_id = user_id;
+        res.json({success: true});
       })
       .catch((err) => {
-        response.error = "There was an unknown error. Please contact the developer if this continues";
-        logError(err);
+        response.error = err;
         res.json(response);
       });
 
 });
 
+// Works -- 2019-08-27 13:23
 app.route("/api/auth/logout").get((req, res) => {
   req.session.destroy();
   res.json({signed_out: true});
@@ -176,7 +164,7 @@ app.route("/api/user/games").get((req, res) => {
     for(let game_id in req.session.games) {
       try {
         if(req.session.games.hasOwnProperty(game_id)){
-          let game_data = await Game.byId(game_id);
+          let game_data = await Game.getById(game_id);
           current_games.push(game_data[0]);
         }
       } catch(e) {

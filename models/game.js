@@ -1,7 +1,8 @@
 const db = require("./../config/database");
+const tools = require("./../config/tools");
 
 const Game = {
-  byId: (id) => {
+  getById: (id) => {
     return new Promise((resolve, reject) => {
       db.promiseQuery("SELECT * FROM `games` WHERE `game_id` = ?", [id]).then((rows, err) => {
         err ? reject("There was an error communicating with the database") : resolve(rows);
@@ -70,8 +71,47 @@ const Game = {
       }
     });
   },
-  addPlayer: (game_id, player_id, player_status) => {
-    
+  getPlayer: (game_id, player_id) => {
+    return new Promise((resolve, reject) => {
+      db.promiseQuery("SELECT * FROM `game_players` WHERE `game_id` = ? AND `player_id` = ?", [game_id, player_id])
+          .then((rows, err) => {
+            if(err){
+              reject(err);
+            } else{
+              resolve((rows.length) ? rows[0] : false);
+            }
+          });
+    });
+  },
+  addPlayer: (game_id, player_name, player_status = 1, user_id = null) => {
+    return new Promise((resolve, reject) => {
+      try {
+        (async () => {
+          let player_id = tools.genString(3);
+          let player_id_exists = true;
+
+          for(let attempts = 0; player_id_exists && attempts < 5; attempts++){
+            player_id_exists = Game.getPlayer(game_id, player_id);
+            if(player_id_exists){
+              player_id = tools.genString(3);
+            }
+          }
+
+          await db.promiseQuery("INSERT INTO `game_players` (`game_id`, `player_id`, `player_user_id`, `player_name`, `player_status`) VALUES (?,?,?,?,?)", [game_id, player_id, user_id, player_status]);
+          resolve(player_id);
+        })();
+      } catch(er) {
+        reject(er);
+      }
+    });
+  },
+  addCardPack: (game_id, card_pack) => {
+    return new Promise((resolve, reject) => {
+      db.promiseQuery("INSERT INTO `game_card_packs` (`game_id`, `card_pack`) VALUES(?,?)", [game_id, card_pack])
+          .then((res, err) => {
+            (err) ? reject(err) : resolve(card_pack);
+          });
+    });
   }
 };
 
