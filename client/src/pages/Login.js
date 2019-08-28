@@ -71,7 +71,7 @@ export class LoginBox extends React.Component {
                 ]
               });
             } else {
-              this.context.updateState();
+              this.context.updateAppContext();
             }
           });
     };
@@ -84,7 +84,7 @@ export class LoginBox extends React.Component {
         <div>
           <AppContext.Consumer>
             { (context) => {
-                if( context.state.signed_in ){
+                if( context.user.signed_in ){
                   return <Redirect to="/" />
                 }
             }}

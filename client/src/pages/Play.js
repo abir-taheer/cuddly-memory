@@ -1,7 +1,7 @@
 import React from "react";
 
 import {NavBar} from "./../comp/NavBar";
-import {Queue} from "./../comp/Queue";
+// import {Queue} from "./../comp/Queue";
 import {Game} from "./../comp/Game";
 
 const queryString = require('query-string');

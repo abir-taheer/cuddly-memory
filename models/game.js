@@ -4,18 +4,17 @@ const tools = require("./../config/tools");
 const Game = {
   getById: (id) => {
     return new Promise((resolve, reject) => {
-      db.promiseQuery("SELECT * FROM `games` WHERE `game_id` = ?", [id]).then((rows, err) => {
-        err ? reject("There was an error communicating with the database") : resolve(rows);
-      });
+      db.promiseQuery("SELECT * FROM `games` WHERE `game_id` = ?", [id])
+          .then(rows => resolve(rows.length ? rows[0] : false))
+          .catch(reason => reject(reason));
     });
   },
   create: (name) => {
     // Create a new, paused, game and resolve its id
     return new Promise((resolve, reject) => {
       db.promiseQuery("INSERT INTO `games` (game_name) VALUES(?)", [name])
-          .then((result, err) => {
-            (err) ? reject(err): resolve(result.insertId);
-          });
+          .then(result=> resolve(result.insertId))
+          .catch(err => reject(err));
     });
   },
   /**
@@ -71,14 +70,21 @@ const Game = {
       }
     });
   },
-  getPlayer: (game_id, player_id) => {
+  getPlayerById: (game_id, player_id) => {
     return new Promise((resolve, reject) => {
       db.promiseQuery("SELECT * FROM `game_players` WHERE `game_id` = ? AND `player_id` = ?", [game_id, player_id])
+          .then(rows => resolve((rows.length ? rows[0] : false)))
+          .catch(err => reject(err));
+    });
+  },
+  getPlayerByUserId: (game_id, user_id) => {
+    return new Promise((resolve, reject) => {
+      db.promiseQuery("SELECT * FROM `game_players` WHERE `game_id` = ? AND `player_user_id` = ?", [game_id, user_id])
           .then((rows, err) => {
             if(err){
               reject(err);
             } else{
-              resolve((rows.length) ? rows[0] : false);
+              resolve((rows.length ? rows[0] : false));
             }
           });
     });
@@ -87,17 +93,26 @@ const Game = {
     return new Promise((resolve, reject) => {
       try {
         (async () => {
+          // There's a unique index for a user_id and a game_id, duplicates must not be allowed
+          if(user_id){
+            let user_id_check = await Game.getPlayerByUserId(game_id, user_id);
+            if(user_id_check){
+              resolve(user_id_check.player_id);
+              return;
+            }
+          }
+
           let player_id = tools.genString(3);
           let player_id_exists = true;
 
           for(let attempts = 0; player_id_exists && attempts < 5; attempts++){
-            player_id_exists = Game.getPlayer(game_id, player_id);
+            player_id_exists = Game.getPlayerById(game_id, player_id);
             if(player_id_exists){
               player_id = tools.genString(3);
             }
           }
 
-          await db.promiseQuery("INSERT INTO `game_players` (`game_id`, `player_id`, `player_user_id`, `player_name`, `player_status`) VALUES (?,?,?,?,?)", [game_id, player_id, user_id, player_status]);
+          await db.promiseQuery("INSERT INTO `game_players` (`game_id`, `player_id`, `player_user_id`, `player_name`, `player_status`) VALUES (?,?,?,?,?)", [game_id, player_id, user_id, player_name, player_status]);
           resolve(player_id);
         })();
       } catch(er) {
@@ -107,10 +122,9 @@ const Game = {
   },
   addCardPack: (game_id, card_pack) => {
     return new Promise((resolve, reject) => {
-      db.promiseQuery("INSERT INTO `game_card_packs` (`game_id`, `card_pack`) VALUES(?,?)", [game_id, card_pack])
-          .then((res, err) => {
-            (err) ? reject(err) : resolve(card_pack);
-          });
+      db.promiseQuery("INSERT INTO `game_card_packs` (`game_id`, `card_pack_id`) VALUES(?,?)", [game_id, card_pack])
+          .then(() => resolve(card_pack))
+          .catch(err => reject(err));
     });
   }
 };

@@ -34,6 +34,7 @@ const session = expressSession({
 
 const User = require("./models/user");
 const Game = require("./models/game");
+const Card = require("./models/card");
 const logError = require("./errors");
 
 const app_port = process.env.PORT || 3001;
@@ -59,19 +60,34 @@ io.on('connection', socket => {
   });
 
   socket.on("join", (game_id) => {
-    console.log(socket.handshake.session.user_name + " attempted to join game " + game_id);
-    
+    (async () => {
+      let user_data = await User.getById(socket.handshake.session.user_id);
+      console.log(user_data.user_name + " attempted to join game " + game_id);
+    })();
+
   });
 
 });
 
 // Called when the user first opens the app
 // Works -- 2019-08-27 13:23
-app.route("/api/state").get((req, res) => {
-  res.json({
-    "signed_in": (req.session.signed_in || false),
-    "name": (req.session.user_name || "Guest")
-  });
+app.route("/api/user/state").get((req, res) => {
+  let info = {
+    signed_in: req.session.signed_in
+  };
+
+  if(req.session.signed_in){
+    User.getById(req.session.user_id)
+        .then(user => {
+          info.name = user.user_name;
+          res.json(info);
+        })
+        .catch((err) => {
+          res.json(info);
+        });
+  } else {
+    res.json(info);
+  }
 });
 
 // Works -- 2019-08-27 13:23
@@ -89,7 +105,6 @@ app.route("/api/auth/login").post((req, res) => {
         let password_valid = await User.testPassword(user_password, get_user.user_password);
         if(password_valid){
           req.session.signed_in = true;
-          req.session.user_name = get_user.user_name;
           req.session.user_id = get_user.user_id;
           await res.json(success);
         } else {
@@ -127,7 +142,6 @@ app.route("/api/auth/signup").post((req, res) => {
   User.newUser(user_name, user_email, user_password)
       .then((user_id) => {
         req.session.signed_in = true;
-        req.session.user_name = user_name;
         req.session.user_id = user_id;
         res.json({success: true});
       })
@@ -165,7 +179,9 @@ app.route("/api/user/games").get((req, res) => {
       try {
         if(req.session.games.hasOwnProperty(game_id)){
           let game_data = await Game.getById(game_id);
-          current_games.push(game_data[0]);
+          if(game_data) {
+            current_games.push(game_data);
+          }
         }
       } catch(e) {
         logError(e);
@@ -173,6 +189,16 @@ app.route("/api/user/games").get((req, res) => {
     }
     await res.json(current_games);
   })();
+});
+
+app.route("/api/card/packs/official").get((req, res) => {
+  Card.getOfficialPacks()
+      .then((result) => {
+        res.json({success: true, data: result});
+      })
+      .catch(err => {
+        res.json({success: false, error: "There was an unknown error getting the cards"});
+      });
 });
 
 app.route("/api/game/create").post((req, res) => {

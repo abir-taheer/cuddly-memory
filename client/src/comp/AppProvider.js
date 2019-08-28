@@ -15,23 +15,22 @@ export class AppProvider extends React.Component {
 
     super(props);
 
-    this.updateState = () => {
+    this.updateAppContext = () => {
       this.setState({initialized: false});
-      fetch('/api/state')
+      fetch('/api/user/state')
           .then(response => response.json())
-          .then(data => {
-            this.setState({ state: data });
-            this.setState({initialized: true});
-          })
-          .catch((err) => {
+          .then(data => this.setState({ user: data, initialized: true, error: false }))
+          .catch(() => {
             this.setState({error: true, errorCountdown: 3});
+
             let countdown = setInterval(() => {
-              this.setState({errorCountdown: (this.state.errorCountdown - 1)});
+              this.setState((state) => ({errorCountdown: (state.errorCountdown - 1)}));
+
               if( this.state.errorCountdown === 0 ){
                 clearInterval(countdown);
-                this.setState({error: false});
-                this.updateState();
+                this.updateAppContext();
               }
+
             }, 1000);
           });
     };
@@ -41,8 +40,8 @@ export class AppProvider extends React.Component {
       setupError: false,
       errorCountdown: 0,
       app_title: "cuddly-memory",
-      state: {},
-      updateState: this.updateState
+      user: {},
+      updateAppContext: this.updateAppContext
     };
 
 
@@ -50,7 +49,7 @@ export class AppProvider extends React.Component {
   }
 
   componentDidMount() {
-    this.updateState();
+    this.updateAppContext();
   }
 
   render() {

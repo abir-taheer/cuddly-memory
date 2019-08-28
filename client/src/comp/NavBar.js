@@ -9,8 +9,9 @@ import {SimpleTopAppBar, TopAppBarFixedAdjust} from '@rmwc/top-app-bar';
 import '@material/top-app-bar/dist/mdc.top-app-bar.css';
 
 // RMWC List
-import {List, ListItem} from "@rmwc/list";
+import {SimpleListItem, CollapsibleList, List} from "@rmwc/list";
 import '@material/list/dist/mdc.list.css';
+import '@rmwc/list/collapsible-list.css';
 
 // React Router Links for Navigation
 import {Link} from "react-router-dom";
@@ -41,7 +42,7 @@ export class NavBar extends React.Component {
                             return (
                                 <DrawerHeader>
                                     <DrawerTitle>{context.app_title}</DrawerTitle>
-                                    <DrawerSubtitle>{context.state.signed_in ? "Signed in as " + context.state.name : "Not Signed In"}</DrawerSubtitle>
+                                    <DrawerSubtitle>{context.user.signed_in ? "Signed in as " + context.user.name : "Not Signed In"}</DrawerSubtitle>
                                 </DrawerHeader>
                             );
                         }}
@@ -51,36 +52,45 @@ export class NavBar extends React.Component {
                             {/*LogIn Button*/}
                             <AppContext.Consumer>
                                 {(context) => {
-                                    return ( ! context.state.signed_in) ?
-                                        (<Link to="/login">
-                                            <ListItem>Log In</ListItem>
+                                    return ( ! context.user.signed_in) ?
+                                        (<Link to="/login" className={["no-decoration"]}>
+                                            <SimpleListItem
+                                                text="Sign In / Sign Up"
+                                                graphic="lock_open"
+                                            />
                                         </Link>) :
                                         null;
                                 }}
                             </AppContext.Consumer>
 
-                            <Link to="/">
-                                <ListItem>
-                                    Home
-                                </ListItem>
-                            </Link>
-                            <Link to="/my-games">
-                                <ListItem>
-                                    My Games
-                                </ListItem>
+                            <Link to="/" className={["no-decoration"]}>
+                                <SimpleListItem
+                                    text="Home"
+                                    graphic="home"
+                                />
                             </Link>
 
-                            <Link to="/create-game">
-                                <ListItem>
-                                    Create Game
-                                </ListItem>
-                            </Link>
+                            <CollapsibleList
+                                handle={
+                                    <SimpleListItem
+                                        text="Game"
+                                        graphic="videogame_asset"
+                                        metaIcon="chevron_right"
+                                    />
+                                }
+                            >
+                                <Link to="/my-games" className={["no-decoration"]}>
+                                    <SimpleListItem text={"My Games"} graphic={"dashboard"}/>
+                                </Link>
 
-                            <Link to="/">
-                                <ListItem>
-                                    Join Game
-                                </ListItem>
-                            </Link>
+                                <Link to="/create-game" className={["no-decoration"]}>
+                                    <SimpleListItem text={"Create Game"} graphic={"add"}/>
+                                </Link>
+
+                                <Link to="/" className={["no-decoration"]}>
+                                    <SimpleListItem text={"Join Game"} graphic={"how_to_reg"}/>
+                                </Link>
+                            </CollapsibleList>
 
                             {/*LogOut Button*/}
                             <AppContext.Consumer>
@@ -89,12 +99,16 @@ export class NavBar extends React.Component {
                                         fetch("/api/auth/logout")
                                             .then(response => response.json())
                                             .then(() => {
-                                                context.updateState();
+                                                context.updateAppContext();
                                             });
                                     }
-                                    return (context.state.signed_in) ?
+                                    return (context.user.signed_in) ?
                                         (<div>
-                                            <ListItem onClick={logOut}>Log Out</ListItem>
+                                            <SimpleListItem
+                                                text="Sign Out"
+                                                graphic="power_settings_new"
+                                                onClick={logOut}
+                                            />
                                         </div>) :
                                         null;
                                 }}

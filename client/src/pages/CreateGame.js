@@ -2,7 +2,7 @@ import React from 'react';
 
 import {NavBar} from "../comp/NavBar";
 
-import {Card, CardActions} from '@rmwc/card';
+import {Card} from '@rmwc/card';
 import '@material/card/dist/mdc.card.css';
 
 import {Button} from "@rmwc/button";
@@ -76,9 +76,9 @@ export class CreateGame extends React.Component {
   }
 
   componentDidMount() {
-    if( this.context.state.signed_in ){
+    if( this.context.user.signed_in ){
       this.setState((state) => {
-        state.form.player_name = this.context.state.name.substring(0, 24);
+        state.form.player_name = this.context.user.name.substring(0, 24);
         return state;
       });
     }
