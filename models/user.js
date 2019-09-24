@@ -90,7 +90,7 @@ const User = {
   },
   getGames: (id) => {
     return new Promise( (resolve, reject) => {
-      db.promiseQuery("SELECT gp.game_id as `game`, gp.player_id as `player` FROM `game_players` gp INNER JOIN `games` g ON g.game_id = gp.game_id WHERE gp.player_user_id = ? AND (g.game_status = '1' OR g.game_status = '0') AND gp.player_status = '1'",
+      db.promiseQuery("SELECT gp.game_id as `game`, gp.player_id as `player` FROM `game_players` gp INNER JOIN `games` g ON g.game_id = gp.game_id WHERE gp.player_user_id = ? AND (g.game_status = '1' OR g.game_status = '0') AND gp.player_status >= -5",
           [id]).then((games, err) => {
             let games_user = {};
             if(err) {

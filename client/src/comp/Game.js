@@ -4,7 +4,17 @@ import socketIOClient from "socket.io-client";
 export class Game extends React.Component {
   constructor(props) {
     super(props);
+    this.state = {
+      in_game: false,
+      game_settings: {}
+    };
     this.socket = socketIOClient("/", {transports: ['websocket'], upgrade: false});
+
+    this.socket.on("join_status", joined =>{
+      this.setState({in_game: joined});
+
+      // TODO WORK ON THE SETTINGS UPDATE LATER
+    });
   }
 
   componentDidMount() {
@@ -29,10 +39,7 @@ export class Game extends React.Component {
 export class Chat extends React.Component {
   constructor(props) {
     super(props);
-    props.socket.emit("");
-    setTimeout(() => {
-      props.socket.disconnect();
-    }, 5000);
+
   }
 
   render() {

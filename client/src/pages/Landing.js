@@ -8,7 +8,7 @@ export class Landing extends React.Component {
             <div>
                 <NavBar/>
                 <AppContext.Consumer>
-                  {(context) => <h1>Hello { context.user.name || "Guest" } </h1>}
+                  {(context) => <h1 className={["text-center"]}>Hello { context.user.name || "Guest" } </h1>}
                 </AppContext.Consumer>
             </div>
         )

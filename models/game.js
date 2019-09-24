@@ -126,7 +126,60 @@ const Game = {
           .then(() => resolve(card_pack))
           .catch(err => reject(err));
     });
+  },
+  getJoinCode: (join_code) => {
+    return new Promise((resolve, reject) => {
+      db.promiseQuery("SELECT * FROM `game_join_codes` WHERE `join_code` = ?", [join_code])
+          .then(res => resolve((res.length ? res[0]: false)))
+          .catch(err => reject(err));
+    });
+  },
+  addJoinCode: game_id => {
+    return new Promise((resolve, reject) => {
+      try {
+        (async () => {
+          let game_code_exists = await db.promiseQuery("SELECT `join_code`, `join_status` FROM `game_join_codes` WHERE `game_id` = ?", [game_id]);
+          if(game_code_exists.length){
+            if(game_code_exists[0].join_status){
+              return resolve(game_code_exists[0].join_code);
+            } else {
+              await db.promiseQuery("DELETE FROM `game_join_codes` WHERE `join_code` = ?", [game_code_exists[0].join_code]);
+            }
+          }
+
+          let already_exists = true;
+          let current_code = tools.genString(Math.floor(Math.random() * 4) + 5);
+
+          for(let x = 0; already_exists && x < 5 ; x++){
+            already_exists = Game.getJoinCode(current_code);
+            if( already_exists ){
+              current_code = tools.genString(Math.floor(Math.random() * 4) + 5);
+            }
+          }
+
+          let insertCode = await db.promiseQuery("INSERT INTO `game_join_codes`(`join_code`, `game_id`, `join_status`) VALUES(?,?,?)", [current_code, game_id, 1]);
+          resolve(current_code);
+        })();
+      } catch (er){
+        reject(er);
+      }
+    });
+  },
+  endGame: (game_id) => {
+   return new Promise((resolve) => {
+     db.promiseQuery("UPDATE `games` SET `game_status` = ? WHERE `game_id` = ?", [-1, game_id])
+         .then(res => resolve(true));
+   });
+  },
+  getPlayers: game_id => {
+   return new Promise((resolve, reject) => {
+     db.promiseQuery("SELECT * FROM `game_players` WHERE `game_id` = ?", [game_id])
+         .then((data) => resolve(data))
+         .catch((err) => {reject(err)});
+   });
   }
 };
 
 module.exports = Game;
+
+Game.addJoinCode(2);

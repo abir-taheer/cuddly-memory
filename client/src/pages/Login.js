@@ -35,10 +35,13 @@ export class Login extends React.Component {
 }
 
 export class LoginBox extends React.Component {
+  static contextType = AppContext;
+
   constructor(props) {
     super(props);
     this.state = {
       isLogin: true,
+      processing: false,
       form: {}
     };
 
@@ -50,7 +53,14 @@ export class LoginBox extends React.Component {
       this.setState({form: val});
     };
 
+    this.checkEnter = ev => {
+      if(ev.key === 'Enter'){
+        this.submitForm();
+      }
+    };
+
     this.submitForm = () => {
+      this.setState({processing: true});
       let api_path = "/api/auth/" + ((this.state.isLogin) ? "login" : "signup");
       fetch(api_path, {
         method: 'POST',
@@ -62,6 +72,7 @@ export class LoginBox extends React.Component {
           .then(response => response.json())
           .then( data => {
             if( ! data.success ){
+              this.setState({processing: false});
               Queue.notify({
                 body: data.error,
                 actions: [
@@ -89,24 +100,26 @@ export class LoginBox extends React.Component {
                 }
             }}
           </AppContext.Consumer>
-          <Card style={{ width: '22rem' }}>
+          <Card style={{ width: '22rem' }} className={["text-center"]}>
             <h1>{this.state.isLogin ? "Login": "Sign Up"}</h1>
             <form onSubmit={this.submitForm}>
               {( this.state.isLogin ) ?
-                  (<LoginForm  form={this.state.form} setForm={this.setForm} />) :
-                  (<SignUpForm  form={this.state.form} setForm={this.setForm} />)
+                  (<LoginForm  form={this.state.form} setForm={this.setForm} checkEnter={this.checkEnter}/>) :
+                  (<SignUpForm  form={this.state.form} setForm={this.setForm} checkEnter={this.checkEnter} />)
               }
             </form>
             <CardActions>
 
               <div style={{marginLeft: "8%"}}>
-              <Button raised onClick={this.submitForm}>
+              <Button raised
+                      onClick={this.submitForm}
+                      disabled={this.state.processing}>
                 {this.state.isLogin ? "Login": "Sign Up"}
               </Button>
 
               &nbsp;&nbsp;
 
-              <Button onClick={this.switchForm}>
+              <Button onClick={this.switchForm} disabled={this.state.processing}>
                 {this.state.isLogin ? "Sign Up": "Login"} Instead
               </Button>
 
@@ -118,8 +131,6 @@ export class LoginBox extends React.Component {
     )
   }
 }
-LoginBox.contextType = AppContext;
-
 
 class LoginForm extends React.Component {
   constructor(props) {
@@ -153,6 +164,7 @@ class LoginForm extends React.Component {
               name="password"
               value={this.props.form.password || ''}
               onChange={this.updateField}
+              onKeyUp={this.props.checkEnter}
           />
           <Spacer height={"12px"}/>
         </div>
@@ -204,6 +216,7 @@ class SignUpForm extends React.Component {
               name="password"
               value={this.props.form.password || ''}
               onChange={this.updateField}
+              onKeyUp={this.props.checkEnter}
           />
           <Spacer height={"12px"}/>
         </div>

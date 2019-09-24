@@ -50,19 +50,95 @@ io.set('transports', ['websocket']);
 
 io.use(shared_session(session, undefined, {autoSave: true}));
 
+const active_games = {};
 
+let restartInactivityTimer = game_id => {
+  if( active_games[game_id].inactivity_timeout ){
+    clearTimeout(active_games[game_id].inactivity_timeout);
+  }
+  active_games[game_id].inactivity_timeout = setTimeout(() => {
+    Game.endGame(game_id);
+    delete active_games[game_id];
+  }, 1000 * 60 * 15);
+};
+let addActiveGame = (game_id) => {
+  return new Promise((resolve) => {
+    (async () => {
+      let game_settings = await Game.alterSettings(game_id);
+
+      active_games[game_id] = {
+        game_settings: game_settings
+      };
+
+      restartInactivityTimer(game_id);
+      resolve(active_games[game_id]);
+    })();
+  });
+};
 
 io.on('connection', socket => {
-  console.log("someone joined a game");
+  let in_game = false;
+  let game_info = {};
+  let player_inactivity_timeout = setTimeout( () => {
+    if(! in_game){
+      socket.disconnect();
+    }
+  },60 * 1000);
 
   socket.on("disconnect", () => {
-    console.log("A gamer disconnected.");
+    (async () => {
+      if(in_game){
+        await db.promiseQuery("UPDATE `game_players` SET `player_status` = ? WHERE `game_id` = ? AND `player_id` = ?", [(game_info.player_status * -1), game_info.game_id, game_info.player_id]);
+        io.to(game_info.game_id).emit("game_update", {game_players: await Game.getPlayers(game_info.game_id)});
+      } else {
+        clearTimeout(player_inactivity_timeout);
+      }
+    })();
   });
+
+  //player status
+  // -10 = banned
+  // -5 idle admin
+  // -3 = idle player
+  // -1 = idle spectator
+  // 1 = active spectator
+  // 3 = active player
+  // 5 = active admin
 
   socket.on("join", (game_id) => {
     (async () => {
-      let user_data = await User.getById(socket.handshake.session.user_id);
-      console.log(user_data.user_name + " attempted to join game " + game_id);
+      let player_id = socket.handshake.session.games[game_id];
+      let player_info = await Game.getPlayerById(game_id, player_id);
+      // Check if the game is in active games
+      // If not, add it and add the appropriate timers and stuff
+
+      let active_info = active_games[game_id];
+      if(! active_info){
+        active_info = await addActiveGame(game_id);
+      }
+
+      if(player_id && player_info && player_info.player_status >= -5 ){
+        in_game = true;
+        socket.join(game_id);
+        socket.emit("join_status", true);
+        // emit some information about the state of the game //
+
+        // TODO UPDATE WHAT HAPPENS WHEN THE USER CONNECTS AND DISCONNECTS FROM THE SOCKET
+        game_info = {
+          game_id: game_id,
+          player_id: player_id,
+          player_status: player_info.player_status
+        };
+
+        socket.emit("settings_update", active_info);
+
+        socket.emit("game_update", {
+          // this will update the state in react for the game element
+          game_players: await Game.getPlayers(game_id)
+        });
+      } else {
+        socket.emit("join_status", false);
+      }
     })();
 
   });
@@ -104,8 +180,22 @@ app.route("/api/auth/login").post((req, res) => {
       if(get_user) {
         let password_valid = await User.testPassword(user_password, get_user.user_password);
         if(password_valid){
+          let user_games = await User.getGames(get_user.user_id);
           req.session.signed_in = true;
           req.session.user_id = get_user.user_id;
+          req.session.games = req.session.games || {};
+
+          let unadded_games = Object.keys(req.session.games);
+
+          let game_ids = Object.keys(user_games);
+          for(let x = 0 ; x < game_ids.length ; x++ ){
+            req.session.games[game_ids[x]] = user_games[game_ids[x]];
+          }
+
+          for(let x = 0; x < unadded_games.length; x++){
+            await db.promiseQuery("UPDATE `game_players` SET `player_user_id` = ? WHERE `game_id` = ? AND `player_id` = ?", [get_user.user_id, unadded_games[x], req.session.games[unadded_games[x]]]);
+          }
+
           await res.json(success);
         } else {
           await res.json(fail);
@@ -143,6 +233,15 @@ app.route("/api/auth/signup").post((req, res) => {
       .then((user_id) => {
         req.session.signed_in = true;
         req.session.user_id = user_id;
+
+        req.session.games = req.session.games || {};
+        let unadded_games = Object.keys(req.session.games);
+
+        for(let x = 0; x < unadded_games.length; x++){
+          db.promiseQuery("UPDATE `game_players` SET `player_user_id` = ? WHERE `game_id` = ? AND `player_id` = ?", [user_id, unadded_games[x], req.session.games[unadded_games[x]]])
+              .catch(() => logError("Error adding player_user_id of games after sign up."));
+        }
+
         res.json({success: true});
       })
       .catch((err) => {
@@ -161,6 +260,15 @@ app.route("/api/auth/logout").get((req, res) => {
 app.route("/api/user/games").get((req, res) => {
   (async () => {
     req.session.games = req.session.games || {};
+
+    let game_ids = Object.keys(req.session.games);
+
+    for(let x = 0 ; x < game_ids.length ; x++){
+      let game_info = await Game.getById(game_ids[x]);
+      if(! game_info || game_info.game_status < 0){
+        delete req.session.games[game_ids[x]];
+      }
+    }
 
     if(req.session.signed_in){
       try {
@@ -202,8 +310,76 @@ app.route("/api/card/packs/official").get((req, res) => {
 });
 
 app.route("/api/game/create").post((req, res) => {
-  console.log(req.body);
-  res.json({success: true});
+  let response = {success: false};
+  req.session.games = req.session.games || {};
+
+  if(Object.keys(req.session.games).length >= 5){
+    response.error = "You cannot be in more than 5 games at a time.";
+    return res.json(response);
+  }
+
+  if(! String(req.body.player_name) || ! String(req.body.game_name)){
+    response.error = "No fields can be left blank";
+    return res.json(response);
+  }
+
+  if( String(req.body.game_name).length > 64 ){
+    response.error = "Game name cannot be longer than 64 characters";
+    return res.json(response);
+  }
+
+  if( String(req.body.player_name).length > 24 ){
+    response.error = "Player name cannot be longer than 24 characters";
+    return res.json(response);
+  }
+
+  try {
+    (async () => {
+      let selected_card_packs = Array.isArray(req.body.selected_card_packs) ? req.body.selected_card_packs : [];
+      let num_cards = {white: 0, black: 0};
+      let valid_card_packs = [];
+      for(let x = 0 ; x < selected_card_packs.length ; x++){
+        try {
+          let get_count = await Card.getNumInPack(selected_card_packs[x]);
+          num_cards.white += get_count.white;
+          num_cards.black += get_count.black;
+          if( get_count.white || get_count.black ){
+            valid_card_packs.push(selected_card_packs[x]);
+          }
+        } catch (er){
+          logError(er);
+        }
+      }
+
+      if(num_cards.white < 50 && num_cards.black < 25){
+        response.error = "There aren't enough of each type of card to start a game in the selected card packs.";
+        return res.json(response);
+      }
+
+      let game_id = await Game.create(String(req.body.game_name));
+      let player_id = await Game.addPlayer(game_id, String(req.body.player_name), 5, req.session.user_id);
+      req.session.games[game_id] = player_id;
+      for(let x = 0 ; x < valid_card_packs.length ; x++){
+        await Game.addCardPack(game_id, valid_card_packs[x]);
+      }
+
+      let game_settings = await Game.alterSettings(game_id, req.body);
+      let join_code = await Game.addJoinCode(game_id);
+
+      response.success = true;
+      response.data = {
+        game_id: game_id,
+        player_id: player_id,
+        join_code: join_code,
+      };
+
+      await res.json(response);
+    })();
+  } catch (er) {
+    logError(er);
+    response.error = "There was an unknown error. Please try again";
+    res.json(response);
+  }
 });
 
 app.route("*").get((req,res) => {

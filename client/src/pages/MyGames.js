@@ -84,8 +84,8 @@ export class MyGames extends React.Component {
     return (
         <div>
           <NavBar/>
-          <h1>My Current Games</h1>
-          <div className={"flex-center"}>
+          <h1 className={["text-center"]}>My Current Games</h1>
+          <div className={["flex-center"]}>
             <Card className={"medium-width"}>
               <div className={"sub-container"}>
                 <GamesList games={this.state.current_games}/>

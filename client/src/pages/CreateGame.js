@@ -22,17 +22,27 @@ import '@material/floating-label/dist/mdc.floating-label.css';
 import '@material/notched-outline/dist/mdc.notched-outline.css';
 import '@material/line-ripple/dist/mdc.line-ripple.css';
 import '@material/list/dist/mdc.list.css';
-import '@material/menu/dist/mdc.menu.css';
-import '@material/menu-surface/dist/mdc.menu-surface.css';
 
 import {Checkbox} from "@rmwc/checkbox";
 import '@material/checkbox/dist/mdc.checkbox.css';
 import '@material/form-field/dist/mdc.form-field.css';
 
 import {Spacer} from "../comp/Spacer";
+import {Queue} from "../comp/Queue";
 
+import {Icon} from "@rmwc/icon";
+import '@rmwc/icon/icon.css';
+
+import {DataTable, DataTableRow, DataTableBody, DataTableCell, DataTableHeadCell, DataTableContent, DataTableHead} from "@rmwc/data-table";
+import '@rmwc/data-table/data-table.css';
+
+import {CircularProgress} from '@rmwc/circular-progress';
+import '@rmwc/circular-progress/circular-progress.css';
+import {Redirect} from "react-router-dom";
 
 export class CreateGame extends React.Component {
+  static contextType = AppContext;
+
   constructor(props) {
     super(props);
     this.state = {
@@ -44,8 +54,16 @@ export class CreateGame extends React.Component {
         trade_points_redraw: false,
         rando_cardrissian: false,
         turn_timer: 90,
-        chat: true
-      }
+        chat: true,
+        selected_card_packs: []
+      },
+      card_packs: [],
+      card_packs_loaded: false,
+      white_cards_selected: 0,
+      black_cards_selected: 0,
+      game_created: false,
+      new_game_id: "",
+      processing: false
     };
 
     this.updateForm = (ev) => {
@@ -54,6 +72,13 @@ export class CreateGame extends React.Component {
         state.form[target.name] = target.value;
         return state;
       });
+    };
+
+    // TODO UPDATE THIS ONCE CUSTOM CARD PACKS ARE ENABLED
+    this.fetchCardPacks = () => {
+      fetch("/api/card/packs/official")
+          .then(res => res.json())
+          .then(response => this.setState({card_packs: (response.data|| []), card_packs_loaded: response.success}));
     };
 
     this.updateCheckbox = (ev) => {
@@ -65,14 +90,55 @@ export class CreateGame extends React.Component {
     };
 
     this.submitForm = () => {
+      this.setState({processing: true});
       fetch("/api/game/create", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(this.state.form),
-      }).then((res) => res.json()).then(res => {console.log(res)});
-    }
+      })
+          .then((res) => res.json())
+          .then(res => {
+            if(res.success){
+              this.setState({game_created: true, new_game_id: res.data.game_id});
+            } else {
+              Queue.notify({
+                body: res.error,
+                actions: [
+                  {
+                    "icon": "close"
+                  }
+                ]
+              });
+              this.setState({processing: false});
+            }
+          });
+    };
+
+    this.triggerCardPack = (id) =>{
+      this.setState((state) => {
+        let packs = state.form.selected_card_packs;
+        if(packs.includes(id)){
+          packs.splice(packs.indexOf(id), 1);
+        } else {
+          packs.push(id);
+        }
+
+        let whites = 0;
+        let blacks = 0;
+        for(let x = 0 ; x < state.card_packs.length ; x++){
+          let cp = state.card_packs[x];
+          if(packs.includes(cp.card_pack_id)){
+            whites += cp.white;
+            blacks += cp.black;
+          }
+        }
+        state.form.selected_card_packs = packs;
+        return {form: state.form, white_cards_selected: whites, black_cards_selected: blacks};
+      });
+    };
+
   }
 
   componentDidMount() {
@@ -82,9 +148,14 @@ export class CreateGame extends React.Component {
         return state;
       });
     }
+    this.fetchCardPacks();
   }
 
-  render() {
+  render(){
+    if(this.state.game_created){
+      return <Redirect to={"/play?game=" + encodeURIComponent(this.state.new_game_id)} />;
+    }
+
     return (
         <div>
           <NavBar/>
@@ -92,7 +163,7 @@ export class CreateGame extends React.Component {
           <div className={"flex-center"}>
             <Card style={{
               padding: "0 3%",
-              width: "600px"
+              maxWidth: "90%"
             }}>
               <h1>Create Game:</h1>
 
@@ -132,6 +203,68 @@ export class CreateGame extends React.Component {
 
               <Spacer height={"20px"}/>
 
+              <h3>Card Packs</h3>
+              <DataTable
+                  style={{ height: '300px' }}
+                  stickyRows={1}
+              >
+                {this.state.card_packs_loaded ?
+                    (
+                        <DataTableContent>
+                          <DataTableHead>
+                            <DataTableRow>
+                              <DataTableHeadCell alignStart>Name</DataTableHeadCell>
+                              <DataTableHeadCell alignEnd>Creator</DataTableHeadCell>
+                            </DataTableRow>
+                          </DataTableHead>
+                          <DataTableBody>
+                            {
+                              this.state.card_packs.map((data, i) => {
+                                return (
+                                    <DataTableRow key={i}
+                                                  activated={this.state.form.selected_card_packs.includes(data.card_pack_id)}
+                                                  onClick={() => {this.triggerCardPack(data.card_pack_id)}}>
+                                      <DataTableCell>
+                                        {data.card_pack_name}
+                                        {
+                                          data.official ? (
+                                              <span>
+                                                &nbsp;
+                                                <Icon icon={{icon: "check_circle_outline", size:"xsmall"}}
+                                                      style={{color: "green", verticalAlign: "middle"}}
+
+                                                />
+                                              </span>
+                                          ) : null
+                                        }
+                                      </DataTableCell>
+                                      <DataTableCell>{data.creator_name} {data.official && <span>&trade;</span>}</DataTableCell>
+                                    </DataTableRow>
+                                );
+                              })
+                            }
+                          </DataTableBody>
+                        </DataTableContent>
+                    ):
+                    (
+                        <div>
+                          <Spacer height={"120px"}/>
+                          <div className={["flex-center"]} >
+                            <CircularProgress size={"large"}/>
+                          </div>
+                        </div>
+                    )
+                }
+              </DataTable>
+
+              <Spacer height={"20px"}/>
+
+              <p>Number of White Cards: <b>{this.state.white_cards_selected}</b></p>
+              <p>Number of Black Cards: <b>{this.state.black_cards_selected}</b></p>
+
+
+              <Spacer height={"20px"}/>
+
               <p>Extra Settings:</p>
 
               <Checkbox
@@ -162,8 +295,11 @@ export class CreateGame extends React.Component {
                   onChange={this.updateCheckbox}
               />
 
+              <Spacer height={"20px"}/>
+
+
               <div>
-                <Button raised onClick={this.submitForm}>
+                <Button raised onClick={this.submitForm} disabled={this.state.processing}>
                   Create
                 </Button>
               </div>
@@ -174,4 +310,3 @@ export class CreateGame extends React.Component {
     )
   }
 }
-CreateGame.contextType = AppContext;

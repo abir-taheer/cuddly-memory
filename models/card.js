@@ -10,8 +10,7 @@ const Card = {
     });
   },
   getOfficialPacks: () => {
-    return new Promise((resolve, reject) => {
-      db.promiseQuery("SELECT \n" +
+    return new Promise((resolve, reject) => db.promiseQuery("SELECT \n" +
           "COUNT(IF(c.`card_type` = 1, 1, null)) as `white`, \n" +
           "COUNT(IF(c.`card_type` = 0, 1, null)) as `black`,\n" +
           "cp.`*`, \n" +
@@ -23,8 +22,8 @@ const Card = {
           "WHERE cp.`official` = 1\n" +
           "GROUP BY cp.`card_pack_id`")
           .then(res => resolve(res))
-          .catch(err => reject(err));
-    });
+          .catch(err => reject(err))
+    );
   }
 };
 
